@@ -1,0 +1,12 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+
+node_modules/
+dist/

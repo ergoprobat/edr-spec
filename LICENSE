@@ -1,0 +1,9 @@
+SPDX-License-Identifier: CC-BY-4.0 AND Apache-2.0
+
+This repository is dual-licensed.
+
+Specification prose, including the README, is licensed under the Creative Commons Attribution 4.0 International Public License. The full text is in LICENSE-CC-BY.
+
+JSON Schema and the conformance corpus are licensed under the Apache License, Version 2.0. The full text is in LICENSE-APACHE.
+
+Copyright 2026 Luca Bertelli.
