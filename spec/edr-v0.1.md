@@ -17,7 +17,7 @@ The key `edr` is the format generation. Every 0.x draft uses `edr: 1`. That numb
 | JSON Schema | `schema/edr-v0.1.schema.json` |
 | Positive examples | `examples/` |
 
-The schema `$id` is `https://ergo.dev/schema/edr/v0.1.json`. That URI is the canonical name of this schema. The file in this repository is the artifact to validate against. This draft does not use `https://ergo.dev/schema/edr/v1.json`. That URI is reserved for the 1.0.0 freeze.
+The schema `$id` is `https://ergoplatform.io/schema/edr/v0.1.json`. That URI is the canonical name of this schema. The file in this repository is the artifact to validate against. This draft does not use `https://ergoplatform.io/schema/edr/v1.json`. That URI is reserved for the 1.0.0 freeze. The host `ergo.dev` is not a name of this schema.
 
 Breaking changes are allowed before 1.0.0. A breaking change bumps the draft and publishes a new schema file and a new `$id`. A document that validates against 0.1.0 is not required to validate against a later draft.
 
