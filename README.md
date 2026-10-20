@@ -2,15 +2,15 @@
 
 Open specification and JSON Schema for the ergo Decision Record (EDR) format.
 
-> Status: skeleton. The specification draft, JSON Schema and conformance corpus land in a later change.
+> Status: Draft RFC 0.1.0. Normative text in [spec/edr-v0.1.md](spec/edr-v0.1.md). Schema `$id` is `https://ergo.dev/schema/edr/v0.1.json`.
 
 The EDR format is the open record for a binding engineering decision: owner, scope, validity period and the check that verifies it. This repository is the standards process for that format. Prose and schema use different licenses, so the text can be republished and the schema can be embedded in Apache-2.0 implementations.
 
-## What will live here
+## What lives here
 
-- Versioned specification prose, including a migration guide from MADR and Nygard ADRs
-- JSON Schema for the format
-- A conformance corpus of positive and negative fixtures
+- [spec/edr-v0.1.md](spec/edr-v0.1.md): Draft RFC 0.1.0. A MADR or Nygard file without frontmatter is not an EDR document until an importer adds frontmatter.
+- [schema/edr-v0.1.schema.json](schema/edr-v0.1.schema.json): JSON Schema for the frontmatter.
+- [examples/](examples/): 20 positive fixtures. `tools/validate_examples.py` checks them in CI.
 
 ## License
 
