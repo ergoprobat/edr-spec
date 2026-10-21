@@ -1,1 +1,1 @@
-checks
+checks: [] should be non-empty

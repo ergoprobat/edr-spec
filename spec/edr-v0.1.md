@@ -3,7 +3,7 @@
 - Status: Draft RFC
 - Version: 0.1.0
 - Date: 2026-10-20
-- License: CC-BY-4.0 (this text). The JSON Schema and the files under `examples/` are Apache-2.0.
+- License: CC-BY-4.0 (this text). The JSON Schema and the files under `examples/` and `conformance/` are Apache-2.0.
 
 This document is the normative specification of the ergo Decision Record (EDR) format at draft 0.1.0. An EDR file records one engineering decision: who owns it, where it applies, when it is in force, and which check verifies it. The file is Markdown with YAML frontmatter, and it is a superset of a MADR record.
 
@@ -16,6 +16,7 @@ The key `edr` is the format generation. Every 0.x draft uses `edr: 1`. That numb
 | This text | `spec/edr-v0.1.md` |
 | JSON Schema | `schema/edr-v0.1.schema.json` |
 | Positive examples | `examples/` |
+| Negative fixtures | `conformance/invalid/` |
 
 The schema `$id` is `https://ergoplatform.io/schema/edr/v0.1.json`. That URI is the canonical name of this schema. The file in this repository is the artifact to validate against. This draft does not use `https://ergoplatform.io/schema/edr/v1.json`. That URI is reserved for the 1.0.0 freeze. The host `ergo.dev` is not a name of this schema.
 
@@ -27,7 +28,7 @@ A valid EDR file is UTF-8 Markdown. It starts with a YAML frontmatter block deli
 
 The frontmatter MUST be a single YAML mapping whose keys are only the fields in section 4. Unknown keys are invalid. The mapping MUST include every required field, and it MAY include `inferred`.
 
-The body MUST contain exactly one level-1 heading. After that heading, the body MUST contain these level-2 headings, in this order, each with at least one paragraph or list:
+The body MUST contain exactly one level-1 heading. After that heading, the body MUST contain these level-2 headings, in this order, each exactly once, and each with at least one paragraph or list:
 
 1. `Context`
 2. `Decision`
@@ -43,7 +44,7 @@ A file with no frontmatter is not an EDR document. MADR and Nygard records witho
 
 Validate the parsed frontmatter mapping, not the Markdown bytes, against `schema/edr-v0.1.schema.json` (JSON Schema draft 2020-12). YAML dates MUST be treated as ISO `YYYY-MM-DD` strings before validation. YAML `null` stays null.
 
-A validator conforms to draft 0.1.0 when every file in `examples/` passes and each file in `conformance/invalid/` fails for the reason in its sibling `.expect` file. `examples/` is the positive corpus. `conformance/invalid/` is the negative corpus. The `.expect` file is one line that must appear in the validator's error text. A failure for a different reason does not conform.
+A validator conforms to draft 0.1.0 when every file in `examples/` passes and each file in `conformance/invalid/` fails with an error message equal to the one line in its sibling `.expect` file. `examples/` is the positive corpus. `conformance/invalid/` is the negative corpus. The `.expect` line is the message after the path prefix, matched in full. A different message does not conform. Each required level-2 heading appears once. A line that is exactly `---` after the frontmatter stays in the body.
 
 ## 4. Frontmatter fields
 

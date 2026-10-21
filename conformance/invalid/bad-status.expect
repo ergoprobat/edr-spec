@@ -1,1 +1,1 @@
-status
+status: 'maybe' is not one of ['proposed', 'accepted', 'verified', 'needs-review', 'rejected', 'superseded', 'deprecated']

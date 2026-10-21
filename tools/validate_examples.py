@@ -46,13 +46,20 @@ def coerce(value: object) -> object:
 
 
 def split_frontmatter(text: str, path: Path) -> tuple[object, str]:
-    if not text.startswith("---\n"):
+    # A line that is exactly "---" closes the frontmatter. A later "---" line
+    # in the body, including a horizontal rule, stays in the body.
+    text = text.replace("\r\n", "\n")
+    lines = text.split("\n")
+    if not lines or lines[0] != "---":
         raise ValueError(f"{path}: frontmatter must start with ---")
-    end = text.find("\n---\n", 4)
-    if end < 0:
-        raise ValueError(f"{path}: frontmatter is missing the closing ---")
-    raw = text[4:end]
-    body = text[end + 5 :]
+    try:
+        close = lines.index("---", 1)
+    except ValueError as exc:
+        raise ValueError(f"{path}: frontmatter is missing the closing ---") from exc
+    raw = "\n".join(lines[1:close])
+    body = "\n".join(lines[close + 1 :])
+    if text.endswith("\n"):
+        body += "\n"
     loaded = yaml.safe_load(raw)
     if not isinstance(loaded, dict):
         raise ValueError(f"{path}: frontmatter must be a mapping")
@@ -72,11 +79,15 @@ def check_body(body: str, path: Path) -> list[str]:
         return errors
     positions: list[int] = []
     for heading in REQUIRED_HEADINGS:
-        if heading not in lines:
+        found = [index for index, line in enumerate(lines) if line == heading]
+        if len(found) > 1:
+            errors.append(f"{path}: duplicate heading {heading}")
+            continue
+        if not found:
             errors.append(f"{path}: missing heading {heading}")
             positions.append(-1)
-        else:
-            positions.append(lines.index(heading))
+            continue
+        positions.append(found[0])
     if errors:
         return errors
     if positions != sorted(positions) or positions[0] < h1_at[0]:
@@ -88,6 +99,13 @@ def check_body(body: str, path: Path) -> list[str]:
         if not any(line.strip() and not line.startswith("#") for line in chunk):
             errors.append(f"{path}: {heading} has no paragraph or list")
     return errors
+
+
+def error_message(path: Path, error: str) -> str:
+    prefix = f"{path}: "
+    if error.startswith(prefix):
+        return error[len(prefix) :]
+    return error
 
 
 def document_errors(path: Path, validator: Draft202012Validator) -> list[str]:
@@ -116,8 +134,8 @@ def main() -> int:
 
     validator = Draft202012Validator(schema)
     paths = sorted(EXAMPLES.glob("*.md"))
-    if len(paths) != 20:
-        fail(f"{EXAMPLES}: expected 20 examples, found {len(paths)}")
+    if len(paths) != 21:
+        fail(f"{EXAMPLES}: expected 21 examples, found {len(paths)}")
         return 1
 
     errors: list[str] = []
@@ -140,9 +158,11 @@ def main() -> int:
         if not found:
             errors.append(f"{path}: expected a failure containing {expected!r}")
             continue
-        combined = "\n".join(found)
-        if expected not in combined:
-            errors.append(f"{path}: failure did not contain {expected!r}: {combined}")
+        messages = [error_message(path, error) for error in found]
+        if expected not in messages:
+            errors.append(
+                f"{path}: no error message equaled {expected!r}: {messages}"
+            )
 
     if errors:
         for message in errors:

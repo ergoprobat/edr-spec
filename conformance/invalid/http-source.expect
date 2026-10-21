@@ -1,1 +1,1 @@
-url
+sources/0/url: 'http://github.com/acme/platform/pull/10' does not match '^https://\\S+$'
