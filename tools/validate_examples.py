@@ -18,6 +18,7 @@ from jsonschema.exceptions import SchemaError
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = ROOT / "schema" / "edr-v0.1.schema.json"
 EXAMPLES = ROOT / "examples"
+INVALID = ROOT / "conformance" / "invalid"
 
 REQUIRED_HEADINGS = (
     "## Context",
@@ -89,6 +90,19 @@ def check_body(body: str, path: Path) -> list[str]:
     return errors
 
 
+def document_errors(path: Path, validator: Draft202012Validator) -> list[str]:
+    try:
+        document, body = split_frontmatter(path.read_text(encoding="utf-8"), path)
+    except ValueError as exc:
+        return [str(exc)]
+    errors: list[str] = []
+    for error in validator.iter_errors(document):
+        location = "/".join(str(part) for part in error.absolute_path) or "<root>"
+        errors.append(f"{path}: {location}: {error.message}")
+    errors.extend(check_body(body, path))
+    return errors
+
+
 def main() -> int:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     if not isinstance(schema, dict):
@@ -108,21 +122,36 @@ def main() -> int:
 
     errors: list[str] = []
     for path in paths:
-        try:
-            document, body = split_frontmatter(path.read_text(encoding="utf-8"), path)
-        except ValueError as exc:
-            errors.append(str(exc))
+        errors.extend(document_errors(path, validator))
+
+    invalid_paths = sorted(INVALID.glob("*.md"))
+    if not invalid_paths:
+        errors.append(f"{INVALID}: expected negative fixtures")
+    for path in invalid_paths:
+        expect_path = path.with_suffix(".expect")
+        if not expect_path.is_file():
+            errors.append(f"{path}: missing {expect_path.name}")
             continue
-        for error in validator.iter_errors(document):
-            location = "/".join(str(part) for part in error.absolute_path) or "<root>"
-            errors.append(f"{path}: {location}: {error.message}")
-        errors.extend(check_body(body, path))
+        expected = expect_path.read_text(encoding="utf-8").strip()
+        if not expected or "\n" in expected:
+            errors.append(f"{expect_path}: expected one line")
+            continue
+        found = document_errors(path, validator)
+        if not found:
+            errors.append(f"{path}: expected a failure containing {expected!r}")
+            continue
+        combined = "\n".join(found)
+        if expected not in combined:
+            errors.append(f"{path}: failure did not contain {expected!r}: {combined}")
 
     if errors:
         for message in errors:
             fail(message)
         return 1
-    print(f"validated {len(paths)} examples against {SCHEMA_PATH.name}")
+    print(
+        f"validated {len(paths)} examples and {len(invalid_paths)} invalid fixtures "
+        f"against {SCHEMA_PATH.name}"
+    )
     return 0
 
 

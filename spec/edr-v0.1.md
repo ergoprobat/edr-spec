@@ -43,7 +43,7 @@ A file with no frontmatter is not an EDR document. MADR and Nygard records witho
 
 Validate the parsed frontmatter mapping, not the Markdown bytes, against `schema/edr-v0.1.schema.json` (JSON Schema draft 2020-12). YAML dates MUST be treated as ISO `YYYY-MM-DD` strings before validation. YAML `null` stays null.
 
-A validator conforms to draft 0.1.0 when every file in `examples/` passes and a document that violates the schema or the body rules in section 2 fails. This draft ships positive examples only.
+A validator conforms to draft 0.1.0 when every file in `examples/` passes and each file in `conformance/invalid/` fails for the reason in its sibling `.expect` file. `examples/` is the positive corpus. `conformance/invalid/` is the negative corpus. The `.expect` file is one line that must appear in the validator's error text. A failure for a different reason does not conform.
 
 ## 4. Frontmatter fields
 
