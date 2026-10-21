@@ -96,9 +96,53 @@ def check_body(body: str, path: Path) -> list[str]:
     bounds = positions + [len(lines)]
     for heading, start, stop in zip(REQUIRED_HEADINGS, positions, bounds[1:]):
         chunk = lines[start + 1 : stop]
-        if not any(line.strip() and not line.startswith("#") for line in chunk):
+        if not any(is_prose(line) for line in chunk):
             errors.append(f"{path}: {heading} has no paragraph or list")
     return errors
+
+
+def is_prose(line: str) -> bool:
+    trimmed = line.strip()
+    if not trimmed or trimmed.startswith("#") or trimmed == "---":
+        return False
+    return True
+
+
+def reason_code(path: Path, error: str) -> str:
+    message = error_message(path, error)
+    if message == "frontmatter must start with ---":
+        return "frontmatter-start"
+    if message == "frontmatter is missing the closing ---":
+        return "frontmatter-close"
+    if message == "frontmatter must be a mapping":
+        return "frontmatter-mapping"
+    if message == "expected exactly one level-1 heading":
+        return "one-h1"
+    if message == "headings are out of order":
+        return "heading-order"
+    if message.startswith("duplicate heading "):
+        return "duplicate-heading"
+    if message.startswith("missing heading "):
+        return "missing-heading"
+    if message.endswith("has no paragraph or list"):
+        return "section-empty"
+    if message.startswith("<root>: Additional properties"):
+        return "additional-properties"
+    if message.startswith("status:"):
+        return "status"
+    if message.startswith("owner:"):
+        return "owner"
+    if message.startswith("valid_to:"):
+        return "valid_to"
+    if message.startswith("scope:"):
+        return "scope"
+    if message.startswith("sources/") and "/url:" in message:
+        return "source-url"
+    if message.startswith("checks:") and "should be non-empty" in message:
+        return "checks-empty"
+    if message.startswith("checks:") and "does not contain items" in message:
+        return "checks-deterministic"
+    return ""
 
 
 def error_message(path: Path, error: str) -> str:
@@ -158,11 +202,9 @@ def main() -> int:
         if not found:
             errors.append(f"{path}: expected a failure containing {expected!r}")
             continue
-        messages = [error_message(path, error) for error in found]
-        if expected not in messages:
-            errors.append(
-                f"{path}: no error message equaled {expected!r}: {messages}"
-            )
+        codes = [reason_code(path, error) for error in found]
+        if expected not in codes:
+            errors.append(f"{path}: no reason code equaled {expected!r}: {codes}")
 
     if errors:
         for message in errors:

@@ -1,1 +1,1 @@
-checks: [{'engine': 'llm-advisory', 'target': 'readme', 'ref': 'prompts/readme-summary.txt', 'mode': 'advise'}] does not contain items matching the given schema
+checks-deterministic
