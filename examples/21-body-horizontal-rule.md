@@ -30,6 +30,13 @@ The frontmatter closer is the first line that is exactly `---`.
 
 A later horizontal rule stays in the body, and the headings after it still count.
 
+```text
+# Fake title
+## Decision
+```
+
+A heading inside a fence is an example, not a second title.
+
 ## Decision
 
 Parsers keep every heading that follows a body horizontal rule.

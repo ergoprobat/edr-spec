@@ -66,8 +66,21 @@ def split_frontmatter(text: str, path: Path) -> tuple[object, str]:
     return coerce(loaded), body
 
 
+def visible_lines(lines: list[str]) -> list[str]:
+    visible: list[str] = []
+    fenced = False
+    for line in lines:
+        if line.startswith("```"):
+            fenced = not fenced
+            continue
+        if fenced:
+            continue
+        visible.append(line)
+    return visible
+
+
 def check_body(body: str, path: Path) -> list[str]:
-    lines = body.splitlines()
+    lines = visible_lines(body.splitlines())
     errors: list[str] = []
     h1_at = [
         index
@@ -108,6 +121,30 @@ def is_prose(line: str) -> bool:
     return True
 
 
+def schema_reason(error: object) -> str:
+    path = list(getattr(error, "absolute_path", []))
+    keyword = getattr(error, "validator", "")
+    if keyword == "additionalProperties" and path == []:
+        return "additional-properties"
+    if path[:1] == ["status"]:
+        return "status"
+    if path[:1] == ["owner"]:
+        return "owner"
+    if path[:1] == ["valid_to"]:
+        return "valid_to"
+    if path[:1] == ["scope"]:
+        return "scope"
+    if len(path) >= 3 and path[0] == "sources" and path[2] == "url":
+        return "source-url"
+    if path[:1] == ["checks"] and keyword == "minItems":
+        return "checks-empty"
+    if path[:1] == ["checks"] and keyword == "contains":
+        if getattr(error, "instance", None) == []:
+            return "checks-empty"
+        return "checks-deterministic"
+    return ""
+
+
 def reason_code(path: Path, error: str) -> str:
     message = error_message(path, error)
     if message == "frontmatter must start with ---":
@@ -126,22 +163,6 @@ def reason_code(path: Path, error: str) -> str:
         return "missing-heading"
     if message.endswith("has no paragraph or list"):
         return "section-empty"
-    if message.startswith("<root>: Additional properties"):
-        return "additional-properties"
-    if message.startswith("status:"):
-        return "status"
-    if message.startswith("owner:"):
-        return "owner"
-    if message.startswith("valid_to:"):
-        return "valid_to"
-    if message.startswith("scope:"):
-        return "scope"
-    if message.startswith("sources/") and "/url:" in message:
-        return "source-url"
-    if message.startswith("checks:") and "should be non-empty" in message:
-        return "checks-empty"
-    if message.startswith("checks:") and "does not contain items" in message:
-        return "checks-deterministic"
     return ""
 
 
@@ -159,8 +180,9 @@ def document_errors(path: Path, validator: Draft202012Validator) -> list[str]:
         return [str(exc)]
     errors: list[str] = []
     for error in validator.iter_errors(document):
+        code = schema_reason(error)
         location = "/".join(str(part) for part in error.absolute_path) or "<root>"
-        errors.append(f"{path}: {location}: {error.message}")
+        errors.append(f"{path}: {code}: {location}: {error.message}")
     errors.extend(check_body(body, path))
     return errors
 
@@ -202,9 +224,18 @@ def main() -> int:
         if not found:
             errors.append(f"{path}: expected a failure containing {expected!r}")
             continue
-        codes = [reason_code(path, error) for error in found]
-        if expected not in codes:
-            errors.append(f"{path}: no reason code equaled {expected!r}: {codes}")
+        codes = []
+        for error in found:
+            code = reason_code(path, error)
+            if code == "" and ": " in error:
+                # Schema errors store the code between the path and the location.
+                parts = error.split(": ", 2)
+                if len(parts) == 3 and parts[1]:
+                    code = parts[1]
+            if code:
+                codes.append(code)
+        if set(codes) != {expected}:
+            errors.append(f"{path}: reasons {codes} != {expected!r}")
 
     if errors:
         for message in errors:
