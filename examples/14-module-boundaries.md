@@ -14,7 +14,7 @@ supersedes: []
 criticality: warning
 checks:
   - engine: depcruise
-    ref: .dependency-cruiser.cjs
+    ref: .dependency-cruiser.json
     mode: warn
 waivers: []
 sources:
@@ -43,4 +43,4 @@ Violations warn until the two known cycles are removed.
 
 ## Verification
 
-`.dependency-cruiser.cjs` is the rule file, tagged for architecture, JavaScript, and boundaries.
+`.dependency-cruiser.json` is the rule file, tagged for architecture, JavaScript, and boundaries.
