@@ -17,7 +17,7 @@ criticality: warning
 checks:
   - engine: eslint
     target: typescript
-    ref: rules/no-floating-promises.js
+    ref: eslint.json
     mode: warn
 waivers: []
 sources:
@@ -46,4 +46,4 @@ Existing violations warn until the backlog is cleared. New code should not add m
 
 ## Verification
 
-ESLint loads `rules/no-floating-promises.js` in warn mode on `services/**`.
+Compile reads `eslint.json` and writes `eslint.config.mjs`. The check is in warn mode on `services/**`.
