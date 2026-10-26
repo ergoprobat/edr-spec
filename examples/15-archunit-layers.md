@@ -14,7 +14,7 @@ supersedes: []
 criticality: blocking
 checks:
   - engine: archunit
-    ref: src/test/java/ArchitectureTest.java
+    ref: archunit.json
     mode: block
 waivers: []
 sources:
@@ -43,4 +43,4 @@ New framework imports in the domain fail the build.
 
 ## Verification
 
-ArchUnit test `src/test/java/ArchitectureTest.java` runs in block mode.
+The JSON rule file `archunit.json` compiles to a JUnit Jupiter ArchUnit test. The check is in block mode.
