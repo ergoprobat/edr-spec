@@ -5,7 +5,7 @@
 - Date: 2026-10-20
 - License: CC-BY-4.0 (this text). The JSON Schema and the files under `examples/` and `conformance/` are Apache-2.0.
 
-This document is the normative specification of the ergo Decision Record (EDR) format at draft 0.1.0. An EDR file records one engineering decision: who owns it, where it applies, when it is in force, and which check verifies it. The file is Markdown with YAML frontmatter, and it is a superset of a MADR record.
+This document is the normative specification of the Engineering Decision Record (EDR) format at draft 0.1.0. An EDR file records one engineering decision: who owns it, where it applies, when it is in force, and which check verifies it. The file is Markdown with YAML frontmatter, and it is a superset of a MADR record.
 
 The key `edr` is the format generation. Every 0.x draft uses `edr: 1`. That number is not the SemVer of this document.
 
@@ -18,7 +18,7 @@ The key `edr` is the format generation. Every 0.x draft uses `edr: 1`. That numb
 | Positive examples | `examples/` |
 | Negative fixtures | `conformance/invalid/` |
 
-The schema `$id` is `https://ergoplatform.io/schema/edr/v0.1.json`. That URI is the canonical name of this schema. The file in this repository is the artifact to validate against. This draft does not use `https://ergoplatform.io/schema/edr/v1.json`. That URI is reserved for the 1.0.0 freeze. The host `ergo.dev` is not a name of this schema.
+The schema `$id` is `https://ipsoplatform.io/schema/edr/v0.1.json`. That URI is the canonical name of this schema. The file in this repository is the artifact to validate against. This draft does not use `https://ipsoplatform.io/schema/edr/v1.json`. That URI is reserved for the 1.0.0 freeze.
 
 Breaking changes are allowed before 1.0.0. A breaking change bumps the draft and publishes a new schema file and a new `$id`. A document that validates against 0.1.0 is not required to validate against a later draft.
 
