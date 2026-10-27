@@ -1,8 +1,8 @@
 # edr-spec
 
-Open specification and JSON Schema for the ergo Decision Record (EDR) format.
+Open specification and JSON Schema for the Engineering Decision Record (EDR) format.
 
-> Status: Draft RFC 0.1.0. Normative text in [spec/edr-v0.1.md](spec/edr-v0.1.md). Schema `$id` is `https://ergoplatform.io/schema/edr/v0.1.json`.
+> Status: Draft RFC 0.1.0. Normative text in [spec/edr-v0.1.md](spec/edr-v0.1.md). Schema `$id` is `https://ipsoplatform.io/schema/edr/v0.1.json`.
 
 The EDR format is the open record for a binding engineering decision: owner, scope, validity period and the check that verifies it. This repository is the standards process for that format. Prose and schema use different licenses, so the text can be republished and the schema can be embedded in Apache-2.0 implementations.
 
@@ -30,4 +30,4 @@ python3 tools/validate_examples.py
 
 ## Contributing
 
-Follow the contributor terms in [ergoprobat/.github](https://github.com/ergoprobat/.github/blob/main/CONTRIBUTING.md). Commits need a `Signed-off-by` trailer (`git commit -s`).
+Follow the contributor terms in [ipsofacto-io/.github](https://github.com/ipsofacto-io/.github/blob/main/CONTRIBUTING.md). Commits need a `Signed-off-by` trailer (`git commit -s`).
