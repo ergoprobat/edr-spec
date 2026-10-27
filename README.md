@@ -1,5 +1,7 @@
 # edr-spec
 
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/ipsofacto-io/edr-spec/badge)](https://scorecard.dev/viewer/?uri=github.com/ipsofacto-io/edr-spec)
+
 Open specification and JSON Schema for the Engineering Decision Record (EDR) format.
 
 > Status: Draft RFC 0.1.0. Normative text in [spec/edr-v0.1.md](spec/edr-v0.1.md). Schema `$id` is `https://ipsoplatform.io/schema/edr/v0.1.json`.
