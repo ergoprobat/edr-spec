@@ -1,0 +1,58 @@
+---
+edr: 1
+id: 01M5C5QEHHNXJ3D7X2ZCMGXQT7
+slug: tls-on-public-ingress
+title: Public ingress must terminate TLS
+status: accepted
+owner: team:platform
+scope:
+  - org: acme
+valid_from: 2026-01-15
+valid_to: null
+review_by: 2026-07-15
+supersedes: []
+criticality: blocking
+checks: []
+waivers: []
+sources:
+  - type: pr
+    url: https://github.com/acme/platform/pull/10
+tags: [tls]
+premises:
+  - id: postgres-major-is-16
+    statement: The platform still runs PostgreSQL 16.
+    every: 30
+    probe:
+      url: https://example.com/platform/postgres.json
+      pointer: /major
+      equals: 16
+  - id: postgres-major-is-16
+    statement: The platform still publishes major 16.
+    every: 30
+    probe:
+      url: https://example.com/platform/postgres.json
+      pointer: /major
+      equals: 16
+---
+
+# Public ingress must terminate TLS
+
+## Context
+
+Public entry points that still speak plain HTTP expose tokens and session cookies on the path.
+
+## Decision
+
+Every public ingress terminates TLS. Plain HTTP on a public listener only redirects to HTTPS.
+
+## Alternatives considered
+
+- Keep HTTP for public health checks: those checks do not need a public listener, and a redirect covers browsers.
+
+## Consequences
+
+Clients trust the platform certificate. Private health checks stay off the public port.
+
+## Verification
+
+A listener on port 80 that does not redirect fails review until a check exists for this record.
