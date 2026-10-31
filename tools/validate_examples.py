@@ -1,7 +1,8 @@
-"""Validate EDR v0.1 examples against the JSON Schema and the body rules.
+"""Validate EDR examples against the JSON Schema and the body rules.
 
-YAML dates become ISO strings before validation. The schema file is also
-checked against the draft 2020-12 metaschema.
+YAML dates become ISO strings before validation. Draft 0.1 and draft 0.2
+schemas are checked against the draft 2020-12 metaschema. The 0.1 corpus
+must pass both drafts. Premises fixtures must pass 0.2 and fail 0.1.
 """
 
 from __future__ import annotations
@@ -16,9 +17,28 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import SchemaError
 
 ROOT = Path(__file__).resolve().parents[1]
-SCHEMA_PATH = ROOT / "schema" / "edr-v0.1.schema.json"
+SCHEMA_V01 = ROOT / "schema" / "edr-v0.1.schema.json"
+SCHEMA_V02 = ROOT / "schema" / "edr-v0.2.schema.json"
 EXAMPLES = ROOT / "examples"
 INVALID = ROOT / "conformance" / "invalid"
+V02_EXAMPLES = EXAMPLES / "v0.2"
+V02_INVALID = INVALID / "v0.2"
+V02_EXAMPLE_NAMES = frozenset({"premise-equals.md", "premise-semver.md"})
+V02_INVALID_NAMES = frozenset(
+    {
+        "two-comparisons.md",
+        "no-comparison.md",
+        "every-zero.md",
+        "every-366.md",
+        "twenty-one-premises.md",
+        "statement-empty.md",
+        "statement-too-long.md",
+        "probe-script.md",
+        "duplicate-premise-id.md",
+        "equals-too-large.md",
+        "semver-build.md",
+    }
+)
 
 REQUIRED_HEADINGS = (
     "## Context",
@@ -124,7 +144,7 @@ def is_prose(line: str) -> bool:
 def schema_reason(error: object) -> str:
     path = list(getattr(error, "absolute_path", []))
     keyword = getattr(error, "validator", "")
-    if keyword == "additionalProperties" and path == []:
+    if keyword == "additionalProperties":
         return "additional-properties"
     if path[:1] == ["status"]:
         return "status"
@@ -142,6 +162,8 @@ def schema_reason(error: object) -> str:
         if getattr(error, "instance", None) == []:
             return "checks-empty"
         return "checks-deterministic"
+    if path[:1] == ["premises"]:
+        return "premises"
     return ""
 
 
@@ -173,6 +195,45 @@ def error_message(path: Path, error: str) -> str:
     return error
 
 
+def equals_too_large(document: object) -> bool:
+    if not isinstance(document, dict):
+        return False
+    premises = document.get("premises")
+    if not isinstance(premises, list):
+        return False
+    for item in premises:
+        if not isinstance(item, dict):
+            continue
+        probe = item.get("probe")
+        if not isinstance(probe, dict) or "equals" not in probe:
+            continue
+        encoded = json.dumps(
+            probe["equals"], ensure_ascii=False, separators=(",", ":")
+        ).encode("utf-8")
+        if len(encoded) > 1024:
+            return True
+    return False
+
+
+def duplicate_premise_id(document: object) -> bool:
+    if not isinstance(document, dict):
+        return False
+    premises = document.get("premises")
+    if not isinstance(premises, list):
+        return False
+    seen: set[str] = set()
+    for item in premises:
+        if not isinstance(item, dict):
+            continue
+        premise_id = item.get("id")
+        if not isinstance(premise_id, str):
+            continue
+        if premise_id in seen:
+            return True
+        seen.add(premise_id)
+    return False
+
+
 def document_errors(path: Path, validator: Draft202012Validator) -> list[str]:
     try:
         document, body = split_frontmatter(path.read_text(encoding="utf-8"), path)
@@ -183,34 +244,54 @@ def document_errors(path: Path, validator: Draft202012Validator) -> list[str]:
         code = schema_reason(error)
         location = "/".join(str(part) for part in error.absolute_path) or "<root>"
         errors.append(f"{path}: {code}: {location}: {error.message}")
+    if duplicate_premise_id(document):
+        errors.append(f"{path}: premise-id: premises: duplicate premise id")
+    if equals_too_large(document):
+        errors.append(f"{path}: premises: premises: equals exceeds 1024 bytes")
     errors.extend(check_body(body, path))
     return errors
 
 
-def main() -> int:
-    schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
+def reason_codes(path: Path, errors: list[str]) -> list[str]:
+    codes: list[str] = []
+    for error in errors:
+        code = reason_code(path, error)
+        if code == "" and ": " in error:
+            # Schema errors store the code between the path and the location.
+            parts = error.split(": ", 2)
+            if len(parts) == 3 and parts[1]:
+                code = parts[1]
+        if code:
+            codes.append(code)
+    return codes
+
+
+def load_validator(schema_path: Path) -> tuple[Draft202012Validator | None, list[str]]:
+    try:
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return None, [f"{schema_path}: {exc.msg}"]
     if not isinstance(schema, dict):
-        fail(f"{SCHEMA_PATH}: schema must be a JSON object")
-        return 1
+        return None, [f"{schema_path}: schema must be a JSON object"]
     try:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
-        fail(f"{SCHEMA_PATH}: {exc.message}")
-        return 1
+        return None, [f"{schema_path}: {exc.message}"]
+    return Draft202012Validator(schema), []
 
-    validator = Draft202012Validator(schema)
-    paths = sorted(EXAMPLES.glob("*.md"))
-    if len(paths) != 21:
-        fail(f"{EXAMPLES}: expected 21 examples, found {len(paths)}")
-        return 1
 
+def check_valid(validator: Draft202012Validator, paths: list[Path]) -> list[str]:
     errors: list[str] = []
     for path in paths:
         errors.extend(document_errors(path, validator))
+    return errors
 
-    invalid_paths = sorted(INVALID.glob("*.md"))
+
+def check_invalid(validator: Draft202012Validator, directory: Path) -> list[str]:
+    errors: list[str] = []
+    invalid_paths = sorted(directory.glob("*.md"))
     if not invalid_paths:
-        errors.append(f"{INVALID}: expected negative fixtures")
+        return [f"{directory}: expected negative fixtures"]
     for path in invalid_paths:
         expect_path = path.with_suffix(".expect")
         if not expect_path.is_file():
@@ -224,26 +305,71 @@ def main() -> int:
         if not found:
             errors.append(f"{path}: expected a failure containing {expected!r}")
             continue
-        codes = []
-        for error in found:
-            code = reason_code(path, error)
-            if code == "" and ": " in error:
-                # Schema errors store the code between the path and the location.
-                parts = error.split(": ", 2)
-                if len(parts) == 3 and parts[1]:
-                    code = parts[1]
-            if code:
-                codes.append(code)
+        codes = reason_codes(path, found)
         if set(codes) != {expected}:
             errors.append(f"{path}: reasons {codes} != {expected!r}")
+    return errors
+
+
+def named_markdown(directory: Path, expected: frozenset[str]) -> tuple[list[Path], list[str]]:
+    found = {path.name for path in directory.glob("*.md")}
+    if found != expected:
+        missing = sorted(expected - found)
+        extra = sorted(found - expected)
+        return [], [f"{directory}: names missing {missing} extra {extra}"]
+    return sorted(directory.glob("*.md")), []
+
+
+def main() -> int:
+    errors: list[str] = []
+    validator_v01, load_errors = load_validator(SCHEMA_V01)
+    errors.extend(load_errors)
+    validator_v02, load_errors = load_validator(SCHEMA_V02)
+    errors.extend(load_errors)
+    if validator_v01 is None or validator_v02 is None:
+        for message in errors:
+            fail(message)
+        return 1
+
+    examples = sorted(EXAMPLES.glob("*.md"))
+    if len(examples) != 21:
+        errors.append(f"{EXAMPLES}: expected 21 examples, found {len(examples)}")
+    else:
+        errors.extend(check_valid(validator_v01, examples))
+        errors.extend(check_valid(validator_v02, examples))
+
+    shared_invalid = sorted(INVALID.glob("*.md"))
+    if not shared_invalid:
+        errors.append(f"{INVALID}: expected negative fixtures")
+    else:
+        errors.extend(check_invalid(validator_v01, INVALID))
+        errors.extend(check_invalid(validator_v02, INVALID))
+
+    v02_examples, name_errors = named_markdown(V02_EXAMPLES, V02_EXAMPLE_NAMES)
+    errors.extend(name_errors)
+    if v02_examples:
+        errors.extend(check_valid(validator_v02, v02_examples))
+        for path in v02_examples:
+            found = document_errors(path, validator_v01)
+            codes = reason_codes(path, found)
+            if set(codes) != {"additional-properties"}:
+                errors.append(
+                    f"{path}: draft 0.1 reasons {codes} != 'additional-properties'"
+                )
+
+    v02_invalid, name_errors = named_markdown(V02_INVALID, V02_INVALID_NAMES)
+    errors.extend(name_errors)
+    if v02_invalid:
+        errors.extend(check_invalid(validator_v02, V02_INVALID))
 
     if errors:
         for message in errors:
             fail(message)
         return 1
     print(
-        f"validated {len(paths)} examples and {len(invalid_paths)} invalid fixtures "
-        f"against {SCHEMA_PATH.name}"
+        f"validated {len(examples)} examples and {len(shared_invalid)} invalid fixtures "
+        f"against {SCHEMA_V01.name} and {SCHEMA_V02.name}; "
+        f"validated {len(v02_examples)} v0.2 examples and {len(v02_invalid)} v0.2 invalid fixtures"
     )
     return 0
 
